@@ -5,43 +5,29 @@ using UnityEngine;
 
 public class SymbolsHolder
 {
-    // delegates
-    public System.Action<Symbol, float> OnHittingSymbol { get; set; }
-    public System.Action<Symbol> OnFullHitSymbol { get; set; }
-    public System.Action<Symbol> OnActualSymbolChanged { get; set; }
+    public event System.Action<Symbol> ActualSymbolChangedEvent;
 
-    public int Count { get { return SymbolsList.Count; } }
-
-    private Symbol _actualSymbol;
+    Symbol _actualSymbol;
     public Symbol ActualSymbol
     {
         private set
         {
-            if(_actualSymbol != value)
+            if (_actualSymbol != value)
             {
                 _actualSymbol = value;
-                if (OnActualSymbolChanged != null)
-                    OnActualSymbolChanged(_actualSymbol);
+                if (ActualSymbolChangedEvent != null)
+                    ActualSymbolChangedEvent(_actualSymbol);
             }
-
         }
         get { return _actualSymbol; }
     }
+    public int Count { get { return symbolsList.Count; } }
 
-    private List<Symbol> SymbolsList = new List<Symbol>();
-    private GameObject SymbolPrefab;
+    List<Symbol> symbolsList = new List<Symbol>();
 
-    public void SetSymbolPrefab(GameObject symbolPrefab)
+    public void FillWithNewSymbols(GameObject symbolPrefab, Game.EGameDifficulty difficulty)
     {
-        SymbolPrefab = symbolPrefab;
-    }
-
-    public void FillWithNewSymbols(Game.EGameDifficulty difficulty)
-    {
-        if (SymbolsList.Count > 0)
-        {
-            RemoveAll();
-        }
+        RemoveAll();
 
         var positions = SymbolsPositionGenerator.GetSymbolPositionsForDifficulty(difficulty);
 
@@ -49,7 +35,7 @@ public class SymbolsHolder
         foreach (var position in positions)
         {
             // create gameobject
-            var newSymbolObject = GameObject.Instantiate(SymbolPrefab);
+            var newSymbolObject = GameObject.Instantiate(symbolPrefab);
             newSymbolObject.transform.position = position;
             newSymbolObject.transform.LookAt(Vector3.zero);
             newSymbolObject.SetActive(true);
@@ -57,50 +43,31 @@ public class SymbolsHolder
             // set data
             var newSymbol = newSymbolObject.GetComponent<Symbol>();
             newSymbol.SetIndex(index++);
-            RegisterSymbolEvents(newSymbol);
 
-            SymbolsList.Add(newSymbol);
+            symbolsList.Add(newSymbol);
         }
 
-        ActualSymbol = SymbolsList.FirstOrDefault(s => s.Index == 0);
+        ActualSymbol = symbolsList.FirstOrDefault(s => s.Index == 0);
     }
-
 
     public void SetNextSymbolAsActual()
     {
         if (ActualSymbol == null)
             return;
 
-        ActualSymbol = SymbolsList.FirstOrDefault(s => s.Index == ActualSymbol.Index + 1);
+        ActualSymbol = symbolsList.FirstOrDefault(s => s.Index == ActualSymbol.Index + 1);
     }
 
     public void Remove(Symbol symbol)
     {
-        UnRegisterSymbolEvents(symbol);
-        Object.Destroy(symbol.gameObject);
-        SymbolsList.Remove(symbol);
+        symbol.Kill();
+        symbolsList.Remove(symbol);
     }
 
     public void RemoveAll()
     {
-        foreach (var symbol in SymbolsList)
-        {
-            UnRegisterSymbolEvents(symbol);
-            Object.Destroy(symbol.gameObject);
-        }
-
-        SymbolsList.Clear();
+        while (symbolsList.Count > 0)
+            Remove(symbolsList[0]);
     }
 
-    private void RegisterSymbolEvents(Symbol symbol)
-    {
-        symbol.FullHitSymbolEvent += OnFullHitSymbol;
-        symbol.HittingSymbolEvent += OnHittingSymbol;
-    }
-
-    private void UnRegisterSymbolEvents(Symbol symbol)
-    {
-        symbol.FullHitSymbolEvent -= OnFullHitSymbol;
-        symbol.HittingSymbolEvent -= OnHittingSymbol;
-    }
 }

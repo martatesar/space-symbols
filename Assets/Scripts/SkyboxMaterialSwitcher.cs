@@ -6,17 +6,17 @@ public class SkyboxMaterialSwitcher : MonoBehaviour {
     public Material HardGameMaterial;
     public Material EasyGameMaterial;
 
-    private Game Game;
+    private Game game;
 
     void Awake()
     {
-        Game = Game.Instance;
-        Game.GameStateChangeEvent += OnGameStateChangeEvent;
+        game = Game.Instance;
+        game.GameStateChangeEvent += OnGameStateChangeEvent;
     }
 
     void Destroy()
     {
-        Game.GameStateChangeEvent -= OnGameStateChangeEvent;
+        game.GameStateChangeEvent -= OnGameStateChangeEvent;
     }
 
     private void OnGameStateChangeEvent(Game.EGameState state)
@@ -24,7 +24,7 @@ public class SkyboxMaterialSwitcher : MonoBehaviour {
         if (state == Game.EGameState.StartNewGame)
         {
             var skyBox = Camera.main.GetComponent<Skybox>();
-            skyBox.material = Game.GameDifficulty == Game.EGameDifficulty.Easy
+            skyBox.material = game.GameDifficulty == Game.EGameDifficulty.Easy
                 ? EasyGameMaterial
                 : HardGameMaterial;
         }

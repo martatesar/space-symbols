@@ -1,58 +1,87 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Symbol : MonoBehaviour
 {
-    public event System.Action<Symbol> FullHitSymbolEvent;
-    public event System.Action<Symbol, float> HittingSymbolEvent;
+    public static event System.Action<Symbol> FullHitSymbolEvent;
 
     public TextMesh TextMesh;
-    
+
     public int Index { get; private set; }
 
-    float ActHitTime;
-    bool isHitting;
-    const float FullHitTime = 1f;
+    // naming should be same as in symbolanimator controller states
+    public enum EState
+    {
+        Idle,
+        IsUnderFire,
+        Die,
+    }
 
-    private ParticleSystem Particles;
+    EState currState;
+    StateMachineBehaviourEvents events;
+    Animator symbolAnimator;
+
+    float actHitTime;
+    const float fullHitTime = 1f;
+    static Dictionary<int, EState> animHashToState = Helper.CreateAnimatorStateDictionary<EState>(); //anim hash to state
 
     void Awake()
     {
-        Particles = GetComponentInChildren<ParticleSystem>();
-        Particles.Stop();
+        symbolAnimator = GetComponent<Animator>();
+        symbolAnimator.GetBehaviour<PlayParticlesInState>().ParticleSystem = GetComponentInChildren<ParticleSystem>();
+
+        events = symbolAnimator.GetBehaviour<StateMachineBehaviourEvents>();
+        events.StateEnterEvent += StateEvents_StateEnterEvent;
     }
+
+    void Destroy()
+    {
+        events.StateEnterEvent -= StateEvents_StateEnterEvent;
+    }
+
+    private void StateEvents_StateEnterEvent(AnimatorStateInfo stateInfo)
+    {
+        currState = animHashToState[stateInfo.shortNameHash];
+        switch (currState)
+        {
+            case EState.Idle:
+                break;
+            case EState.IsUnderFire:
+                break;
+            case EState.Die:
+                if (FullHitSymbolEvent != null)
+                    FullHitSymbolEvent(this);
+
+                Destroy(this.gameObject);
+                break;
+            default:
+                break;
+        }
+
+        Debug.Log(this.gameObject.name + " : " + currState);
+    }
+
 
     // Update is called once per frame
     void Update()
     {
-        if (isHitting)
+        switch (currState)
         {
-            ActHitTime += Time.deltaTime;
-            var t = Mathf.InverseLerp(0, FullHitTime, ActHitTime);
-
-            if (HittingSymbolEvent != null)
-                HittingSymbolEvent(this, t);
-
-            if (ActHitTime > FullHitTime)
-            {
-                if (FullHitSymbolEvent != null)
-                    FullHitSymbolEvent(this);
-
-            }
-        }
-        else
-        {
-            if(!Particles.isStopped)
-                Particles.Stop();
-        }
-
-    }
-
-    public void PlayParticles()
-    {
-        if (!Particles.isPlaying)
-        {
-            Particles.Play();
+            case EState.Idle:
+                break;
+            case EState.IsUnderFire:
+                actHitTime += Time.deltaTime;
+                //Debug.Log(ActHitTime);
+                if (actHitTime > fullHitTime)
+                {
+                    symbolAnimator.SetTrigger("Kill");
+                }
+                break;
+            case EState.Die:
+                break;
+            default:
+                break;
         }
     }
 
@@ -62,36 +91,25 @@ public class Symbol : MonoBehaviour
         TextMesh.text = Index.ToString();
     }
 
-    public void SetAlpha(float alpha)
+    public void Kill()
     {
-        TextMesh.color = new Color(TextMesh.color.r, TextMesh.color.r, TextMesh.color.r, alpha);
+        symbolAnimator.SetTrigger("Kill");
     }
 
     void OnTriggerEnter(Collider collider)
     {
-        ActHitTime = 0;
-        isHitting = true;
+        if (Game.Instance.ActualSymbol == this)
+        {
+            symbolAnimator.SetTrigger("Hit");
+        }
     }
 
     void OnTriggerExit(Collider collider)
     {
-        isHitting = false;
+        if (Game.Instance.ActualSymbol == this)
+        {
+            symbolAnimator.SetTrigger("Miss");
+        }
     }
-
-    void OnCollisionEnter(Collision collision)
-    {
-        Debug.Log(collision.gameObject.name);
-
-        Debug.Log(Index);
-    }
-
-    /*
-    public static Color GetColorForIndex(int index)
-    {
-        var s = System.Convert.ToString(index % 8, 2).PadLeft(3, '0');
-        Debug.Log(s);
-        return new Color((float)char.GetNumericValue(s[0]), (float)char.GetNumericValue(s[1]), (float)char.GetNumericValue(s[2]));
-    }
-    */
 
 }

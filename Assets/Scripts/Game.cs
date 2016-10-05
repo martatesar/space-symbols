@@ -26,22 +26,29 @@ public class Game : MonoBehaviour
     public static Game Instance {get; private set;}
 
     public event System.Action<EGameState> GameStateChangeEvent;
-    public event System.Action<Symbol> ActualSymbolChangeEvent;
+    public event System.Action<Symbol> ActualSymbolChangedEvent
+    {
+        add { symbols.ActualSymbolChangedEvent += value;  }
+        remove { symbols.ActualSymbolChangedEvent -= value; }
+    }
 
     public GameObject SymbolPrefab;
-    public EGameDifficulty GameDifficulty { get { return Difficulty; } }
+    public EGameDifficulty GameDifficulty { get { return difficulty; } }
 
-    private SymbolsHolder Symbols = new SymbolsHolder();
-    private EGameState ActualState;
-    private EGameDifficulty Difficulty;
+    private SymbolsHolder symbols = new SymbolsHolder();
+    private EGameState actualState;
+    private EGameDifficulty difficulty;
+
+    public Symbol ActualSymbol
+    {
+        get { return symbols.ActualSymbol; }
+    }
 
     void Awake()
     {
         Instance = this;
-        Symbols.OnFullHitSymbol = OnFullHitSymbol;
-        Symbols.OnHittingSymbol = OnHittingSymbol;
-        Symbols.OnActualSymbolChanged = OnActualSymbolChanged;
-        Symbols.SetSymbolPrefab(SymbolPrefab);
+
+        Symbol.FullHitSymbolEvent += Symbol_FullHitSymbolEvent;
     }
 
     void Start()
@@ -51,7 +58,7 @@ public class Game : MonoBehaviour
 
     public void StartNew(EGameDifficulty difficulty)
     {
-        Difficulty = difficulty;
+        this.difficulty = difficulty;
         SetState(EGameState.StartNewGame);
     }
 
@@ -79,18 +86,18 @@ public class Game : MonoBehaviour
             case EGameState.InGame:
                 break;
             case EGameState.FinishGame:
-                nextState = Symbols.Count == 0
+                nextState = symbols.Count == 0
                     ? EGameState.GameSuccess
                     : EGameState.GameFailure;
-                Symbols.RemoveAll();
+                symbols.RemoveAll();
                 break;
             default:
                 break;
         }
 
-        if (newState != ActualState)
+        if (newState != actualState)
         {
-            ActualState = newState;
+            actualState = newState;
             if (GameStateChangeEvent != null)
             {
                 GameStateChangeEvent(newState);
@@ -105,42 +112,24 @@ public class Game : MonoBehaviour
 
     private void PrepareNewGame()
     {
-        Symbols.FillWithNewSymbols(Difficulty);
+        symbols.FillWithNewSymbols(SymbolPrefab, difficulty);
     }
 
-    private void OnHittingSymbol(Symbol symbol, float lapsedNormalized)
+    private void Symbol_FullHitSymbolEvent(Symbol symbol)
     {
-        if (Symbols.ActualSymbol != symbol)
+        if(symbols.ActualSymbol != symbol)
             return;
 
-        symbol.PlayParticles();
+        symbols.Remove(symbol);
 
-        Handheld.Vibrate();
-
-        symbol.SetAlpha(1 - lapsedNormalized);
-    }
-
-    private void OnFullHitSymbol(Symbol symbol)
-    {
-        if (Symbols.ActualSymbol != symbol)
-            return;
-
-        Symbols.Remove(symbol);
-
-        if (Symbols.Count == 0)
+        if (symbols.Count == 0)
         {
             SetState(EGameState.FinishGame);
         }
         else
         {
-            Symbols.SetNextSymbolAsActual();
+            symbols.SetNextSymbolAsActual();
         }
-    }
-
-    private void OnActualSymbolChanged(Symbol symbol)
-    {
-        if (ActualSymbolChangeEvent != null)
-            ActualSymbolChangeEvent(symbol);
     }
 }
 

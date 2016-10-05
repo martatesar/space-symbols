@@ -24,11 +24,11 @@ public class Timer : MonoBehaviour
         }
     }
 
-    bool Counting;
+    bool counting;
 
 	void Update () 
     {
-        if (Counting)
+        if (counting)
         {
             RemainingTime -= Time.deltaTime;
 
@@ -38,29 +38,30 @@ public class Timer : MonoBehaviour
                 {
                     OutOfTimeEvent();
                 }
+                counting = false;
             }
         }
 	}
 
-    public void Start() 
+    void Start() 
     {
         StopTimer();
     }
 
     public void StartTimer() 
     {
-        Counting = true;
+        counting = true;
         RemainingTime = StopTime;
     }
 
     public void StopTimer() 
     {
-        Counting = false;
+        counting = false;
     }
 
     public void Switch() 
     {
-        if (Counting)
+        if (counting)
         {
             StopTimer();
         }

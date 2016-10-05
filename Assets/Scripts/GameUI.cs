@@ -10,23 +10,26 @@ public class GameUI : MonoBehaviour {
     public GameObject FinishGameUI;
     public GameObject IdleGameUI;
     public GameObject GyroError;
+
     public Text ActualSymbolText;
     public Text TimerText;
     public Text FinishGameText;
 
-    private Game Game;
+    private Game game;
+
+    #region Monobehaviour methods
 
     void Awake()
     {
-        Game = Game.Instance;
+        game = Game.Instance;
 
         if (!SystemInfo.supportsGyroscope)
         {
             GyroError.SetActive(true);
         }
 
-        Game.GameStateChangeEvent += OnGameStateChangeEvent;
-        Game.ActualSymbolChangeEvent += OnActualSymbolChangeEvent;
+        game.GameStateChangeEvent += OnGameStateChangeEvent;
+        game.ActualSymbolChangedEvent += OnActualSymbolChangeEvent;
         Timer.TimeChangeEvent += OnTimeChangeEvent;
         Timer.OutOfTimeEvent += OnOutOfTimeEvent;
     }
@@ -34,8 +37,8 @@ public class GameUI : MonoBehaviour {
 
     void Destroy()
     {
-        Game.GameStateChangeEvent -= OnGameStateChangeEvent;
-        Game.ActualSymbolChangeEvent -= OnActualSymbolChangeEvent;
+        game.GameStateChangeEvent -= OnGameStateChangeEvent;
+        game.ActualSymbolChangedEvent -= OnActualSymbolChangeEvent;
         Timer.TimeChangeEvent -= OnTimeChangeEvent;
         Timer.OutOfTimeEvent -= OnOutOfTimeEvent;
     }
@@ -49,25 +52,33 @@ public class GameUI : MonoBehaviour {
         }
     }
 
+    #endregion
+
+    #region UI Button functions
+
     public void StartHardGame()
     {
-        Game.StartNew(Game.EGameDifficulty.Hard);
+        game.StartNew(Game.EGameDifficulty.Hard);
     }
 
     public void StartEasyGame()
     {
-        Game.StartNew(Game.EGameDifficulty.Easy);
+        game.StartNew(Game.EGameDifficulty.Easy);
     }
 
     public void FinishGame()
     {
-        Game.Finish();
+        game.Finish();
     }
 
     public void SetIdleGameMode()
     {
-        Game.SetIdleMode();
+        game.SetIdleMode();
     }
+
+    #endregion
+
+    #region Event Reactions
 
     private void OnOutOfTimeEvent()
     {
@@ -123,4 +134,5 @@ public class GameUI : MonoBehaviour {
                 break;
         }
     }
+    #endregion
 }
